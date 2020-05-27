@@ -1,0 +1,15 @@
+{
+    "name": "vonage-message-certification",
+    "version": "1.0.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/jovicon/vonage-message-certification"
+    },
+    "license": "ISC",
+    "dependencies": {
+        "body-parser": "^1.19.0",
+        "dotenv": "^8.2.0",
+        "express": "^4.17.1",
+        "nexmo": "^2.7.0-beta-1"
+    }
+}
