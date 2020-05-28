@@ -117,7 +117,7 @@ app.post('/api/verify-request', (req, res) => {
     console.log('userNotVerified')
     console.log(userNotVerified)
     
-    if (userExist == null || userExist != null) {
+    if (userExist == null || userNotVerified != null) {
         // verify request
         nexmo.verify.request({
             number: req.body.phone_number,
@@ -163,30 +163,90 @@ app.post('/api/verify-check', (req, res) => {
     console.log(req.body)
 
     let users = databaseInitialize()
+    let userNotVerified = users.findObject({'phone_number':req.body.phone_number,'verified':false});
+    let userVerified = users.findObject({'phone_number':req.body.phone_number,'verified':true});
 
-    nexmo.verify.check({
-        request_id: req.body.request_id,
-        code: req.body.sms_code.toString()
-    }, (err, result) => {
-        if (err) {
-            console.error('error')
-            console.error(err)
+    if (userNotVerified != null) {
+        nexmo.verify.check({
+            request_id: userNotVerified.request_id,
+            code: req.body.sms_code.toString()
+        }, (err, result) => {
+            if (err) {
+                console.error('error')
+                console.error(err)
+    
+                res.status(400).end(JSON.stringify(err))
+            }
+            else {
+                if ( result.status == 0 ) {
+                    console.log('success')
+                    userNotVerified.verified = true
+                    users.update(userNotVerified)
+                }
 
-            res.status(400).end(JSON.stringify(err))
+                res.status(200).end(JSON.stringify(result))
+            }
+        })
+    }
+    else if (userVerified != null) {
+        res.status(200).end(JSON.stringify( {response:'this user is already verified.'} ))
+    }
+    else {
+        res.status(200).end(JSON.stringify( {response:'you have to send a verify request first.'} ))
+    }
+})
+
+
+// message status websocket handler
+app.post('/api/list-user', (req, res) => {
+    console.log(req.body)
+    let users = databaseInitialize()
+    let allUsers = users.chain().simplesort("id").data()
+    let response = []
+
+    // doing this we hide phone_number user
+    allUsers.forEach( function(user, indice, array) {
+        console.log("En el índice " + indice + " hay este valor: " + user.name);
+        
+        let buildUser = {
+            id: user.id,
+            name: user.name
         }
-        else {
-            console.error('success')
-            
-            res.status(200).end(JSON.stringify(result))
+
+        response.push(buildUser)
+    });
+
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    res.status(200).end(JSON.stringify(response))
+})
+
+// message status websocket handler
+app.post('/api/chat', (req, res) => {
+    console.log(req.body)
+    let users = databaseInitialize()
+    let allUsers = users.chain().simplesort("id").data()
+    let response = []
+
+    // doing this we hide phone_number user
+    allUsers.forEach( function(user, indice, array) {
+        console.log("En el índice " + indice + " hay este valor: " + user.name);
+        
+        let buildUser = {
+            id: user.id,
+            name: user.name
         }
-    })
+
+        response.push(buildUser)
+    });
+
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    res.status(200).end(JSON.stringify(response))
 })
 
 
 // message status websocket handler
 app.post('/webhooks/message-status', (req, res) => {
     console.log(req.body)
-    res.status(200).end()
 })
 
 app.listen(80)
