@@ -221,32 +221,65 @@ app.post('/api/list-user', (req, res) => {
 })
 
 // message status websocket handler
-app.post('/api/chat', (req, res) => {
+app.post('/api/create-chat', (req, res) => {
     console.log(req.body)
+
     let users = databaseInitialize()
-    let allUsers = users.chain().simplesort("id").data()
-    let response = []
+    let user_a = users.findObject({'id':req.body.id_1})
+    let user_b = users.findObject({'id':req.body.id_2})
 
-    // doing this we hide phone_number user
-    allUsers.forEach( function(user, indice, array) {
-        console.log("En el índice " + indice + " hay este valor: " + user.name);
+    console.log(user_a)
+    console.log(user_b)
+
+    if (user_a && user_b) {
+        // create chat
+        res.writeHead(200, {'Content-Type': 'application/json'});
         
-        let buildUser = {
-            id: user.id,
-            name: user.name
+        // message to user_a
+        nexmo.message.sendSms(
+            process.env.FROM_NUMBER,
+            user_a.phone_number,
+            `Reply to this SMS to talk to ${user_b.name}`
+        );
+      
+        // message to user_b
+        nexmo.message.sendSms(
+            process.env.FROM_NUMBER,
+            user_b.phone_number,
+            `Reply to this SMS to talk to ${user_a.name}`
+        );
+
+        res.status(200).end(
+            JSON.stringify (
+                { message: "Sala de chat creada satisfactoriamente." }
+            )
+        )
+    }
+    else {
+
+        // user_b doesn't exist
+        if (user_a) {
+            res.status(200).end(JSON.stringify({ message: "User b doesn't exist" }))
         }
-
-        response.push(buildUser)
-    });
-
-    res.writeHead(200, {'Content-Type': 'application/json'});
-    res.status(200).end(JSON.stringify(response))
+        // user_b doesn't exist
+        else {
+            res.status(200).end(JSON.stringify({ message: "User a doesn't exist" }))
+        }
+    }
 })
 
 
 // message status websocket handler
 app.post('/webhooks/message-status', (req, res) => {
-    console.log(req.body)
+    console.log('received body', req.body)
+    console.log('received request', req.query);
 })
+
+// inbound message websocket handler
+app.post('/webhooks/inbound-message', (req, res) => {
+    console.log(req.body)
+    res.status(200).end()
+})
+
 
 app.listen(80)
